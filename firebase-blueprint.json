@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "Team": {
+      "title": "Team",
+      "description": "A participating team in the quiz competition (LCC).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the team"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name or designation of the team",
+          "maxLength": 100
+        },
+        "school": {
+          "type": "string",
+          "description": "School, institution, or members",
+          "maxLength": 150
+        },
+        "score": {
+          "type": "number",
+          "description": "Current cumulative score of the team"
+        },
+        "color": {
+          "type": "string",
+          "description": "Badge theme color preset key",
+          "maxLength": 30
+        },
+        "lastDelta": {
+          "type": "number",
+          "description": "Last score adjustment delta"
+        },
+        "lastDeltaTime": {
+          "type": "number",
+          "description": "Timestamp of the last score adjustment"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["name", "score"]
+    },
+    "TimerState": {
+      "title": "TimerState",
+      "description": "Synchronized countdown timer state and podium celebration for competition.",
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Configured timer duration in seconds"
+        },
+        "remainingSeconds": {
+          "type": "number",
+          "description": "Remaining seconds countdown"
+        },
+        "status": {
+          "type": "string",
+          "description": "Timer status",
+          "enum": ["idle", "running", "paused", "finished"]
+        },
+        "targetTimestamp": {
+          "type": "number",
+          "description": "Unix timestamp in ms when timer will reach zero if running"
+        },
+        "showPodium": {
+          "type": "boolean",
+          "description": "Whether podium celebration overlay is displayed"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["duration", "remainingSeconds", "status"]
+    }
+  },
+  "firestore": {
+    "/teams/{teamId}": {
+      "schema": "Team",
+      "description": "List of participating teams and their live scores."
+    },
+    "/quiz_settings/{settingId}": {
+      "schema": "TimerState",
+      "description": "Shared timer and competition settings."
+    }
+  }
+}

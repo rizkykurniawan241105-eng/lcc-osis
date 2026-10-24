@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidTeam(data) {
+      return data.name is string 
+        && data.name.size() > 0 
+        && data.name.size() <= 100
+        && data.score is number
+        && (!('school' in data) || (data.school is string && data.school.size() <= 150))
+        && (!('color' in data) || (data.color is string && data.color.size() <= 50))
+        && (!('lastDelta' in data) || data.lastDelta is number)
+        && (!('lastDeltaTime' in data) || data.lastDeltaTime is number)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt is number)
+        && (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string || data.createdAt is number);
+    }
+
+    function isValidTimer(data) {
+      return data.duration is number
+        && data.duration >= 0
+        && data.duration <= 3600
+        && data.remainingSeconds is number
+        && data.remainingSeconds >= 0
+        && data.remainingSeconds <= 3600
+        && data.status is string
+        && data.status in ['idle', 'running', 'paused', 'finished']
+        && (!('targetTimestamp' in data) || data.targetTimestamp is number)
+        && (!('showPodium' in data) || data.showPodium is bool)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string || data.updatedAt is number);
+    }
+
+    match /teams/{teamId} {
+      allow read: if true;
+      allow create, update: if isValidTeam(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /quiz_settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isValidTimer(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /game_state/{stateId} {
+      allow read: if true;
+      allow create, update: if isValidTimer(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

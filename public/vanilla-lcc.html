@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LCC Web - Realtime Firebase Scoreboard & Timer (Vanilla)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+    .font-mono-score { font-family: 'JetBrains Mono', monospace; }
+    .hero-gradient { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #4f46e5 100%); }
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shadow-md">
+          🏆
+        </div>
+        <div>
+          <h1 class="text-base font-black text-slate-900 leading-none">LCC SMA N 1 Salem</h1>
+          <p class="text-[10px] font-semibold text-blue-600">Lomba Cerdas Cermat Realtime</p>
+        </div>
+      </div>
+
+      <!-- Quick Switcher (Desktop) -->
+      <div class="flex items-center gap-2">
+        <div class="hidden md:flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+          <button id="nav-btn-leaderboard" onclick="switchTab('leaderboard')" class="px-3 py-1 rounded-lg bg-white text-blue-700 shadow-xs font-black">Leaderboard (Laptop)</button>
+          <button id="nav-btn-admin" onclick="switchTab('admin')" class="px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900">Admin Juri (HP)</button>
+        </div>
+        <span id="team-counter-badge" class="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">0 Tim</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main id="main-container" class="w-full">
+    
+    <!-- ========================================== -->
+    <!-- 1. TAB LEADERBOARD (LAPTOP PROYEKTOR: FIT 100vh) -->
+    <!-- ========================================== -->
+    <div id="tab-leaderboard" class="h-[calc(100vh-3.5rem)] flex flex-col justify-between max-w-7xl mx-auto p-2 sm:p-3 overflow-hidden">
+      
+      <!-- COMPACT TIMER BANNER -->
+      <section class="hero-gradient rounded-2xl p-3 sm:p-4 text-white shadow-md shrink-0 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span id="lb-timer-status" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 border border-white/25">Siap</span>
+          <span class="hidden sm:inline text-xs font-bold text-blue-100">Hitung Mundur Jawaban</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="lb-timer-clock" class="text-3xl sm:text-5xl font-mono-score font-black tracking-tight leading-none text-white">00:15</div>
+          <div class="w-24 sm:w-48 h-2.5 bg-blue-950/60 rounded-full overflow-hidden border border-white/20 shrink-0">
+            <div id="lb-timer-progress" class="h-full bg-white rounded-full transition-all duration-300" style="width: 100%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- INLINE SLIDE-DOWN PODIUM (transition-all duration-500) -->
+      <section id="lcc-podium-section" class="transition-all duration-500 ease-in-out overflow-hidden max-h-0 opacity-0 scale-95 pointer-events-none my-0 shrink-0">
+        <div class="bg-gradient-to-b from-white via-amber-50/20 to-blue-50/15 border-2 border-amber-300 shadow-lg rounded-2xl p-2 sm:p-3 text-center">
+          <div class="text-[11px] font-black uppercase tracking-wider text-amber-800 mb-1">✨ PODIUM JUARA LOMBA CERDAS CERMAT ✨</div>
+          <div class="grid grid-cols-3 gap-2 sm:gap-4 items-end max-w-xl mx-auto pt-1">
+            <!-- Juara 2 -->
+            <div class="flex flex-col items-center">
+              <span class="px-2 py-0.2 rounded-full text-[9px] font-black bg-blue-600 text-white mb-1 uppercase">JUARA 2</span>
+              <div class="bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-xs w-full mb-1">
+                <div id="podium-2-name" class="font-black text-xs truncate">-</div>
+                <div id="podium-2-score" class="font-mono-score font-black text-sm text-blue-600">0 poin</div>
+              </div>
+              <div class="w-full h-12 sm:h-16 bg-blue-600 rounded-t-xl text-white font-mono-score font-black flex items-center justify-center text-xl shadow">2</div>
+            </div>
+            <!-- Juara 1 -->
+            <div class="flex flex-col items-center -mt-2">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 mb-1 uppercase shadow-xs">👑 JUARA 1</span>
+              <div class="bg-white rounded-xl px-2.5 py-1.5 border-2 border-amber-300 shadow-md w-full mb-1">
+                <div id="podium-1-name" class="font-black text-xs sm:text-sm truncate">-</div>
+                <div id="podium-1-score" class="font-mono-score font-black text-base text-amber-600">0 poin</div>
+              </div>
+              <div class="w-full h-18 sm:h-22 bg-amber-500 rounded-t-xl text-amber-950 font-mono-score font-black flex items-center justify-center text-3xl shadow-lg">1</div>
+            </div>
+            <!-- Juara 3 -->
+            <div class="flex flex-col items-center">
+              <span class="px-2 py-0.2 rounded-full text-[9px] font-black bg-orange-600 text-white mb-1 uppercase">JUARA 3</span>
+              <div class="bg-white rounded-xl px-2 py-1 border border-slate-200 shadow-xs w-full mb-1">
+                <div id="podium-3-name" class="font-black text-xs truncate">-</div>
+                <div id="podium-3-score" class="font-mono-score font-black text-sm text-orange-600">0 poin</div>
+              </div>
+              <div class="w-full h-9 sm:h-12 bg-orange-500 rounded-t-xl text-white font-mono-score font-black flex items-center justify-center text-lg shadow">3</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KLASEMEN SEMENTARA GRID (NO VERTICAL SCROLL ON SCREEN) -->
+      <section class="flex-1 min-h-0 flex flex-col overflow-hidden my-1">
+        <div class="flex items-center justify-between px-1 mb-1 shrink-0">
+          <h2 class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5">
+            <span>🏆 Klasemen Sementara</span>
+          </h2>
+          <span class="text-[10px] font-semibold text-slate-400">Sinkronisasi Realtime</span>
+        </div>
+        <div id="leaderboard-grid" class="flex-1 min-h-0 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 pr-0.5">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. TAB ADMIN (KHUSUS HP JURI)             -->
+    <!-- ========================================== -->
+    <div id="tab-admin" class="hidden max-w-4xl mx-auto px-4 py-4 pb-24 space-y-4">
+      
+      <!-- KONTROL TIMER (ADMIN) -->
+      <section class="hero-gradient rounded-2xl p-4 sm:p-6 text-white shadow-md">
+        <div class="flex items-center justify-between pb-3 border-b border-white/20 mb-3">
+          <div>
+            <h2 class="text-lg font-black">Kontrol Timer Soal</h2>
+            <p class="text-xs text-blue-100">Atur waktu mundur soal di layar proyektor</p>
+          </div>
+          <div id="admin-timer-clock" class="text-3xl font-mono-score font-black bg-white/15 px-3 py-1 rounded-xl border border-white/20">00:15</div>
+        </div>
+
+        <!-- Presets & Inputs -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-blue-100">Cepat:</span>
+            <button onclick="setTimerDuration(10)" class="px-3 py-1 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-mono-score font-black">10s</button>
+            <button onclick="setTimerDuration(15)" class="px-3 py-1 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-mono-score font-black">15s</button>
+            <button onclick="setTimerDuration(30)" class="px-3 py-1 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-mono-score font-black">30s</button>
+            <div class="flex-1"></div>
+            <div class="flex items-center gap-1 bg-white/15 px-2 py-1 rounded-lg">
+              <input id="input-min" type="number" value="0" class="w-8 text-center bg-transparent font-mono-score font-bold text-xs focus:outline-none">
+              <span class="text-xs">m</span>
+              <input id="input-sec" type="number" value="15" class="w-8 text-center bg-transparent font-mono-score font-bold text-xs focus:outline-none">
+              <span class="text-xs">s</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <button id="btn-start-timer" onclick="startTimer()" class="flex-1 py-2 rounded-xl bg-white text-blue-900 font-black text-xs shadow hover:bg-slate-100 active:scale-95 transition-all">▶ Mulai Timer</button>
+            <button id="btn-pause-timer" onclick="pauseTimer()" class="hidden flex-1 py-2 rounded-xl bg-amber-400 text-amber-950 font-black text-xs shadow hover:bg-amber-300 active:scale-95 transition-all">⏸ Jeda</button>
+            <button onclick="resetTimer()" class="py-2 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs border border-white/20">🔄 Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FORM TAMBAH TIM (INSTANT / NO HANGING PROMISE) -->
+      <section class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs">
+        <h2 class="text-base font-black text-slate-900 mb-2.5">Tambah Tim Baru</h2>
+        <form onsubmit="handleAddTeam(event)" class="space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input id="new-team-name" type="text" required placeholder="Nama Tim..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-blue-500">
+            <input id="new-team-school" type="text" placeholder="Sekolah / Keterangan..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-blue-500">
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow active:scale-95 transition-all">+ Tambah Tim</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ACTIONS ROW (RAYAKAN JUARA TOGGLE) -->
+      <div class="flex items-center justify-between gap-2 px-1">
+        <h2 class="text-base font-black text-slate-900">Daftar Tim & Poin</h2>
+        <div class="flex items-center gap-2">
+          <!-- SAKLAR RAYAKAN JUARA -->
+          <button id="btn-toggle-podium" onclick="togglePodium()" class="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-black shadow-xs active:scale-95 transition-all">
+            🎉 Rayakan Juara
+          </button>
+          <button onclick="resetAllTeams()" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold">
+            🗑 Reset Semua
+          </button>
+        </div>
+      </div>
+
+      <!-- TEAMS ADMIN LIST -->
+      <div id="admin-teams-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <!-- DOCKED BOTTOM NAVIGATION (HP ONLY) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-md">
+    <div class="max-w-md mx-auto h-14 flex items-center justify-around">
+      <button onclick="switchTab('admin')" id="dock-btn-admin" class="flex flex-col items-center text-xs font-bold text-slate-500">
+        <span class="text-base">🛡️</span>
+        <span class="text-[10px]">Admin Juri</span>
+      </button>
+      <button onclick="switchTab('leaderboard')" id="dock-btn-leaderboard" class="flex flex-col items-center text-xs font-bold text-blue-600">
+        <span class="text-base">🏆</span>
+        <span class="text-[10px]">Leaderboard</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- FIREBASE CONFIG & APP LOGIC (ESM) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // ========================================================================
+    // 4. STRUKTUR KONFIGURASI FIREBASE
+    // ========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDb1clbbUue1XBoPL3hgFidUNGpxyRcKKQ",
+      authDomain: "intense-strata-lf6jr.firebaseapp.com",
+      projectId: "intense-strata-lf6jr",
+      storageBucket: "intense-strata-lf6jr.firebasestorage.app",
+      messagingSenderId: "973671416228",
+      appId: "1:973671416228:web:fcbe9c06220605de0bc131"
+    };
+
+    const databaseId = "ai-studio-quizmasterrealti-6200742b-891e-476f-a832-bf995bff70cd";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app, databaseId);
+
+    // Local State
+    let teams = [];
+    let timerState = { duration: 15, remainingSeconds: 15, status: 'idle', targetTimestamp: 0, showPodium: false };
+    let activeTab = 'leaderboard';
+    let timerInterval = null;
+    let prevShowPodium = false;
+
+    // REALTIME LISTENERS
+    // 1. Koleksi teams
+    onSnapshot(collection(db, 'teams'), (snapshot) => {
+      try {
+        const list = [];
+        snapshot.forEach(docSnap => {
+          if (docSnap.exists()) list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        teams = list;
+        render();
+      } catch (e) {
+        console.error("Teams parsing error:", e);
+      }
+    }, (error) => console.error("Teams listener error:", error));
+
+    // 2. Dokumen game_state (active)
+    onSnapshot(doc(db, 'game_state', 'active'), (docSnap) => {
+      try {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          timerState = {
+            duration: data.duration ?? 15,
+            remainingSeconds: data.remainingSeconds ?? 15,
+            status: data.status ?? 'idle',
+            targetTimestamp: data.targetTimestamp ?? 0,
+            showPodium: !!data.showPodium
+          };
+          syncTimerLoop();
+          render();
+        } else {
+          setDoc(doc(db, 'game_state', 'active'), timerState);
+        }
+      } catch (e) {
+        console.error("Game state parsing error:", e);
+      }
+    }, (error) => console.error("Game state listener error:", error));
+
+    // TIMER CLIENT LOOP
+    function syncTimerLoop() {
+      if (timerState.status === 'running' && timerState.targetTimestamp) {
+        if (!timerInterval) {
+          timerInterval = setInterval(() => {
+            const diff = Math.max(0, Math.ceil((timerState.targetTimestamp - Date.now()) / 1000));
+            timerState.remainingSeconds = diff;
+            if (diff <= 0) {
+              clearInterval(timerInterval);
+              timerInterval = null;
+              timerState.status = 'finished';
+              setDoc(doc(db, 'game_state', 'active'), { status: 'finished', remainingSeconds: 0, targetTimestamp: 0 }, { merge: true });
+            }
+            updateTimerDisplay();
+          }, 200);
+        }
+      } else {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const min = String(Math.floor(timerState.remainingSeconds / 60)).padStart(2, '0');
+      const sec = String(timerState.remainingSeconds % 60).padStart(2, '0');
+      const timeStr = `${min}:${sec}`;
+      
+      const lbClock = document.getElementById('lb-timer-clock');
+      const adminClock = document.getElementById('admin-timer-clock');
+      if (lbClock) lbClock.innerText = timeStr;
+      if (adminClock) adminClock.innerText = timeStr;
+
+      const progress = document.getElementById('lb-timer-progress');
+      if (progress && timerState.duration > 0) {
+        const pct = Math.max(0, Math.min(100, (timerState.remainingSeconds / timerState.duration) * 100));
+        progress.style.width = `${pct}%`;
+      }
+
+      const statusEl = document.getElementById('lb-timer-status');
+      if (statusEl) {
+        statusEl.innerText = timerState.status === 'running' ? 'Waktu Berjalan' :
+                             timerState.status === 'paused' ? 'Dijeda' :
+                             timerState.status === 'finished' ? 'Waktu Habis!' : 'Siap';
+      }
+
+      const btnStart = document.getElementById('btn-start-timer');
+      const btnPause = document.getElementById('btn-pause-timer');
+      if (btnStart && btnPause) {
+        if (timerState.status === 'running') {
+          btnStart.classList.add('hidden');
+          btnPause.classList.remove('hidden');
+        } else {
+          btnStart.classList.remove('hidden');
+          btnPause.classList.add('hidden');
+        }
+      }
+    }
+
+    // CONFETTI TRIGGER (SAAT PODIUM DIBUKA)
+    function checkConfetti() {
+      if (!prevShowPodium && timerState.showPodium && teams.length > 0) {
+        try {
+          if (typeof confetti === 'function') {
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+            setTimeout(() => confetti({ particleCount: 75, angle: 60, spread: 60, origin: { x: 0, y: 0.65 } }), 250);
+            setTimeout(() => confetti({ particleCount: 75, angle: 120, spread: 60, origin: { x: 1, y: 0.65 } }), 450);
+          }
+        } catch (e) {
+          console.warn('Confetti error:', e);
+        }
+      }
+      prevShowPodium = !!timerState.showPodium;
+    }
+
+    // RENDER UI
+    function render() {
+      document.getElementById('team-counter-badge').innerText = `${teams.length} Tim`;
+      updateTimerDisplay();
+
+      // Sort teams descending
+      const sorted = [...teams].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+      // 1. Leaderboard Podium
+      const podiumSec = document.getElementById('lcc-podium-section');
+      const btnTogglePodium = document.getElementById('btn-toggle-podium');
+
+      if (timerState.showPodium && sorted.length > 0) {
+        podiumSec.className = "transition-all duration-500 ease-in-out overflow-hidden max-h-[240px] opacity-100 scale-100 my-1 shrink-0";
+        if (btnTogglePodium) {
+          btnTogglePodium.innerText = "✖ Tutup Podium";
+          btnTogglePodium.className = "px-3 py-1.5 rounded-xl bg-amber-400 text-amber-950 font-black text-xs shadow";
+        }
+        // Top 3
+        if (sorted[0]) {
+          document.getElementById('podium-1-name').innerText = sorted[0].name;
+          document.getElementById('podium-1-score').innerText = `${sorted[0].score || 0} poin`;
+        }
+        if (sorted[1]) {
+          document.getElementById('podium-2-name').innerText = sorted[1].name;
+          document.getElementById('podium-2-score').innerText = `${sorted[1].score || 0} poin`;
+        }
+        if (sorted[2]) {
+          document.getElementById('podium-3-name').innerText = sorted[2].name;
+          document.getElementById('podium-3-score').innerText = `${sorted[2].score || 0} poin`;
+        }
+      } else {
+        podiumSec.className = "transition-all duration-500 ease-in-out overflow-hidden max-h-0 opacity-0 scale-95 pointer-events-none my-0 shrink-0";
+        if (btnTogglePodium) {
+          btnTogglePodium.innerText = "🎉 Rayakan Juara";
+          btnTogglePodium.className = "px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-black shadow-xs";
+        }
+      }
+      checkConfetti();
+
+      // 2. Leaderboard Grid (Fit to screen)
+      const lbGrid = document.getElementById('leaderboard-grid');
+      if (lbGrid) {
+        if (sorted.length === 0) {
+          lbGrid.innerHTML = `<div class="col-span-full p-6 text-center text-slate-400 text-xs font-bold">Belum ada tim terdaftar. Silakan buka tab Admin Juri.</div>`;
+        } else {
+          lbGrid.innerHTML = sorted.map((t, idx) => {
+            const isTop3 = idx < 3;
+            const rankIcon = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+            const bgBadge = idx === 0 ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-slate-100 text-slate-700';
+            return `
+              <div class="bg-white rounded-xl p-2.5 border border-slate-200 flex items-center justify-between shadow-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="px-2 py-0.5 rounded-lg text-xs font-mono-score font-black ${bgBadge}">${rankIcon}</span>
+                  <div class="min-w-0">
+                    <div class="font-black text-xs sm:text-sm text-slate-900 truncate">${t.name}</div>
+                    <div class="text-[10px] text-slate-400 truncate">${t.school || ''}</div>
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <span class="text-xl sm:text-2xl font-mono-score font-black text-blue-600">${t.score || 0}</span>
+                  <span class="text-[9px] text-slate-400 block -mt-1 font-bold">poin</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 3. Admin Teams List
+      const adminList = document.getElementById('admin-teams-list');
+      if (adminList) {
+        if (teams.length === 0) {
+          adminList.innerHTML = `<div class="col-span-full p-6 text-center text-slate-400 text-xs font-bold bg-white rounded-xl border border-dashed border-slate-200">Belum ada tim. Tambahkan tim di atas.</div>`;
+        } else {
+          adminList.innerHTML = teams.map((t, idx) => `
+            <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-xs flex flex-col justify-between">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <h3 class="font-black text-sm text-slate-900">${t.name}</h3>
+                  <p class="text-[10px] text-slate-500">${t.school || '-'}</p>
+                </div>
+                <button onclick="window.deleteTeam('${t.id}')" class="text-slate-400 hover:text-rose-600 p-1 text-xs">🗑</button>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-2 flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-500">Total Skor:</span>
+                <span class="text-2xl font-mono-score font-black text-blue-600">${t.score || 0}</span>
+              </div>
+              <!-- Quick delta buttons -->
+              <div class="grid grid-cols-4 gap-1.5 mb-2">
+                <button onclick="window.updateScore('${t.id}', 100)" class="py-1 bg-emerald-500 hover:bg-emerald-600 text-white font-mono-score font-bold text-xs rounded-lg active:scale-95">+100</button>
+                <button onclick="window.updateScore('${t.id}', 50)" class="py-1 bg-blue-500 hover:bg-blue-600 text-white font-mono-score font-bold text-xs rounded-lg active:scale-95">+50</button>
+                <button onclick="window.updateScore('${t.id}', -50)" class="py-1 bg-amber-500 hover:bg-amber-600 text-white font-mono-score font-bold text-xs rounded-lg active:scale-95">-50</button>
+                <button onclick="window.updateScore('${t.id}', -100)" class="py-1 bg-rose-500 hover:bg-rose-600 text-white font-mono-score font-bold text-xs rounded-lg active:scale-95">-100</button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    // OPTIMISTIC ACTIONS (ATTACHED TO WINDOW FOR INLINE HTML HANDLERS)
+    window.switchTab = (tab) => {
+      activeTab = tab;
+      const tabLb = document.getElementById('tab-leaderboard');
+      const tabAdm = document.getElementById('tab-admin');
+      if (tab === 'leaderboard') {
+        tabLb.classList.remove('hidden');
+        tabAdm.classList.add('hidden');
+      } else {
+        tabLb.classList.add('hidden');
+        tabAdm.classList.remove('hidden');
+      }
+    };
+
+    window.handleAddTeam = (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('new-team-name');
+      const schoolInput = document.getElementById('new-team-school');
+      const name = nameInput.value.trim();
+      const school = schoolInput.value.trim();
+      if (!name) return;
+
+      // Optimistic update
+      const tempId = 'temp_' + Date.now();
+      teams.push({ id: tempId, name, school, score: 0 });
+      nameInput.value = '';
+      schoolInput.value = '';
+      render();
+
+      // Background write
+      addDoc(collection(db, 'teams'), { name, school, score: 0, createdAt: serverTimestamp() })
+        .catch(err => console.error("addDoc error:", err));
+    };
+
+    window.updateScore = (teamId, delta) => {
+      const team = teams.find(t => t.id === teamId);
+      if (team) {
+        team.score = (team.score || 0) + delta;
+        render(); // Optimistic immediate UI update
+        updateDoc(doc(db, 'teams', teamId), { score: team.score, lastDelta: delta, updatedAt: serverTimestamp() })
+          .catch(err => console.error("updateDoc error:", err));
+      }
+    };
+
+    window.deleteTeam = (teamId) => {
+      if (!confirm("Hapus tim ini?")) return;
+      teams = teams.filter(t => t.id !== teamId);
+      render(); // Optimistic
+      deleteDoc(doc(db, 'teams', teamId)).catch(err => console.error("deleteDoc error:", err));
+    };
+
+    window.resetAllTeams = () => {
+      if (!confirm("Reset semua tim dan poin perlombaan?")) return;
+      const current = [...teams];
+      teams = [];
+      render(); // Optimistic
+      const batch = writeBatch(db);
+      current.forEach(t => batch.delete(doc(db, 'teams', t.id)));
+      batch.commit().catch(err => console.error("Batch reset error:", err));
+    };
+
+    window.togglePodium = () => {
+      timerState.showPodium = !timerState.showPodium;
+      render(); // Optimistic
+      setDoc(doc(db, 'game_state', 'active'), { showPodium: timerState.showPodium }, { merge: true })
+        .catch(err => console.error("togglePodium error:", err));
+    };
+
+    window.setTimerDuration = (sec) => {
+      document.getElementById('input-min').value = Math.floor(sec / 60);
+      document.getElementById('input-sec').value = sec % 60;
+      timerState.duration = sec;
+      timerState.remainingSeconds = sec;
+      timerState.status = 'idle';
+      updateTimerDisplay();
+      setDoc(doc(db, 'game_state', 'active'), { duration: sec, remainingSeconds: sec, status: 'idle', targetTimestamp: 0 }, { merge: true });
+    };
+
+    window.startTimer = () => {
+      const m = parseInt(document.getElementById('input-min').value) || 0;
+      const s = parseInt(document.getElementById('input-sec').value) || 0;
+      const total = m * 60 + s || 15;
+      const remaining = timerState.status === 'idle' || timerState.remainingSeconds <= 0 ? total : timerState.remainingSeconds;
+      const target = Date.now() + remaining * 1000;
+
+      timerState.duration = total;
+      timerState.remainingSeconds = remaining;
+      timerState.status = 'running';
+      timerState.targetTimestamp = target;
+      syncTimerLoop();
+
+      setDoc(doc(db, 'game_state', 'active'), { duration: total, remainingSeconds: remaining, status: 'running', targetTimestamp: target }, { merge: true });
+    };
+
+    window.pauseTimer = () => {
+      timerState.status = 'paused';
+      syncTimerLoop();
+      setDoc(doc(db, 'game_state', 'active'), { status: 'paused', remainingSeconds: timerState.remainingSeconds, targetTimestamp: 0 }, { merge: true });
+    };
+
+    window.resetTimer = () => {
+      const m = parseInt(document.getElementById('input-min').value) || 0;
+      const s = parseInt(document.getElementById('input-sec').value) || 0;
+      const total = m * 60 + s || 15;
+      timerState.duration = total;
+      timerState.remainingSeconds = total;
+      timerState.status = 'idle';
+      timerState.targetTimestamp = 0;
+      syncTimerLoop();
+      setDoc(doc(db, 'game_state', 'active'), { duration: total, remainingSeconds: total, status: 'idle', targetTimestamp: 0 }, { merge: true });
+    };
+  </script>
+</body>
+</html>

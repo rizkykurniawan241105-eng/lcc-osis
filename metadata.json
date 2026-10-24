@@ -1,0 +1,6 @@
+{
+  "name": "LCC Realtime Scoreboard & Timer",
+  "description": "Aplikasi papan skor realtime dan kontrol timer untuk Lomba Cerdas Cermat (LCC) dengan sinkronisasi Firestore.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
